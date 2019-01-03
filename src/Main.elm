@@ -1,20 +1,26 @@
-module Main exposing (..)
+module Main exposing (Model, Msg(..), init, main, nHoles, update, view)
 
 import Browser
-import Html exposing (Html, text, div, h1, img)
-import Html.Attributes exposing (src)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+
 
 
 ---- MODEL ----
 
 
 type alias Model =
-    {}
+    List Int
+
+
+nHoles =
+    14
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    ( List.repeat nHoles 3, Cmd.none )
 
 
 
@@ -36,9 +42,27 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ img [ src "/logo.svg" ] []
-        , h1 [] [ text "Your Elm App is working!" ]
+    let
+        holesPerRow =
+            nHoles // 2
+
+        firstRow =
+            List.take holesPerRow model
+
+        secondRow =
+            List.drop holesPerRow model
+    in
+    div [ style "text-align" "center" ]
+        [ h1 [] [ text "Sow n Reap" ]
+        , table
+            [ id "mainTbl"
+            , Html.Attributes.attribute "cellpadding" "10"
+            , Html.Attributes.attribute "cellspacing" "10"
+            ]
+            [ tr [] (List.map (\hole -> td [ class "hole" ] [ text <| Debug.toString hole ]) firstRow)
+            , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
+            , tr [] (List.map (\hole -> td [ class "hole" ] [ text <| Debug.toString hole ]) secondRow)
+            ]
         ]
 
 
