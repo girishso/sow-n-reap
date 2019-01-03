@@ -34,3 +34,16 @@ img {
 .middle-line td {
   /* border: 1px solid black; */
 }
+
+ul.hole-inner {
+  /* list-style-type: none; */
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+}
+
+ul.hole-inner li {
+  display: block;
+  /* width: 5px; */
+  font-size: 1.2em;
+}

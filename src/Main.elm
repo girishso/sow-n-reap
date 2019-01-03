@@ -20,7 +20,19 @@ nHoles =
 
 init : ( Model, Cmd Msg )
 init =
-    ( List.repeat nHoles 3, Cmd.none )
+    let
+        holes =
+            List.repeat nHoles 5
+                |> List.indexedMap
+                    (\ix n ->
+                        if ix == 3 || ix == 10 then
+                            1
+
+                        else
+                            n
+                    )
+    in
+    ( holes, Cmd.none )
 
 
 
@@ -51,6 +63,21 @@ view model =
 
         secondRow =
             List.drop holesPerRow model
+
+        renderHole hole =
+            ul [ class "hole-inner" ]
+                (List.range 1 hole |> List.map (\x -> li [] [ Char.fromCode 8226 |> String.fromChar |> text ]))
+
+        renderRow row =
+            tr []
+                (List.map
+                    (\hole ->
+                        td [ class "hole" ]
+                            [ renderHole hole
+                            ]
+                    )
+                    row
+                )
     in
     div [ style "text-align" "center" ]
         [ h1 [] [ text "Sow n Reap" ]
@@ -59,9 +86,9 @@ view model =
             , Html.Attributes.attribute "cellpadding" "10"
             , Html.Attributes.attribute "cellspacing" "10"
             ]
-            [ tr [] (List.map (\hole -> td [ class "hole" ] [ text <| Debug.toString hole ]) firstRow)
+            [ renderRow firstRow
             , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
-            , tr [] (List.map (\hole -> td [ class "hole" ] [ text <| Debug.toString hole ]) secondRow)
+            , renderRow secondRow
             ]
         ]
 
