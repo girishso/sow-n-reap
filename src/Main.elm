@@ -22,7 +22,7 @@ init : ( Model, Cmd Msg )
 init =
     let
         holes =
-            List.repeat nHoles 5
+            List.repeat nHoles 8
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then
@@ -65,14 +65,23 @@ view model =
             List.drop holesPerRow model
 
         renderHole hole =
-            ul [ class "hole-inner" ]
-                (List.range 1 hole |> List.map (\x -> li [] [ Char.fromCode 8226 |> String.fromChar |> text ]))
+            div [ class "hole" ]
+                [ div [ class "hole-i1" ]
+                    (List.range 1 hole
+                        |> List.map
+                            (\x ->
+                                div [ class "hole-inner" ]
+                                    -- [ Char.fromCode 8226 |> String.fromChar |> text ]
+                                    []
+                            )
+                    )
+                ]
 
         renderRow row =
             tr []
                 (List.map
                     (\hole ->
-                        td [ class "hole" ]
+                        td []
                             [ renderHole hole
                             ]
                     )
