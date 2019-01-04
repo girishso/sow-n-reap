@@ -2,8 +2,8 @@ module Main exposing (Model, Msg(..), init, main, nHoles, update, view)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
+import Html.Attributes as HA exposing (..)
+import Html.Events as HE exposing (..)
 
 
 
@@ -64,36 +64,26 @@ view model =
         secondRow =
             List.drop holesPerRow model
 
+        renderSeeds n =
+            List.range 1 n
+                |> List.map
+                    (\x -> div [ class "seed" ] [])
+
         renderHole hole =
-            div [ class "hole" ]
-                [ div [ class "hole-i1" ]
-                    (List.range 1 hole
-                        |> List.map
-                            (\x ->
-                                div [ class "hole-inner" ]
-                                    -- [ Char.fromCode 8226 |> String.fromChar |> text ]
-                                    []
-                            )
-                    )
+            td []
+                [ div [ class "hole" ]
+                    [ div [ class "hole-i1" ] (renderSeeds hole) ]
                 ]
 
         renderRow row =
-            tr []
-                (List.map
-                    (\hole ->
-                        td []
-                            [ renderHole hole
-                            ]
-                    )
-                    row
-                )
+            tr [] (List.map renderHole row)
     in
     div [ style "text-align" "center" ]
         [ h1 [] [ text "Sow n Reap" ]
         , table
             [ id "mainTbl"
-            , Html.Attributes.attribute "cellpadding" "10"
-            , Html.Attributes.attribute "cellspacing" "10"
+            , HA.attribute "cellpadding" "10"
+            , HA.attribute "cellspacing" "10"
             ]
             [ renderRow firstRow
             , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
