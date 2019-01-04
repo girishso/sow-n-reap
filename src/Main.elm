@@ -22,7 +22,7 @@ init : ( Model, Cmd Msg )
 init =
     let
         holes =
-            List.repeat nHoles 8
+            List.repeat nHoles 3
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then

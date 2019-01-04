@@ -23,12 +23,6 @@ img {
   margin: 0 auto;
 }
 
-.hole {
-  border: 1px solid black;
-  width: 100px;
-  height: 100px;
-  border-radius: 50px;
-}
 
 .middle-line td {
   /* border: 1px solid black; */
@@ -45,16 +39,51 @@ ul.hole-inner li {
   font-size: 1.2em;
 } */
 
-.hole-i1 {
+
+.hole {
+  border: 1px solid black;
+  width: 100px;
+  height: 100px;
+  border-radius: 50px;
+}
+
+
+/* .hole-i1 {
   display: table-cell;
+  padding: 0 10px;
 }
 
 .hole-inner {
 	background:#f00;
-	display:inline-block;
 	height:10px;
-  /* margin-left:22px; */
+  width:10px;
+  border-radius: 5px;
+
+  display:inline-block;
   margin: 0 10px 0 10px;
-	width:10px;
+} */
+
+
+.hole-i1 {
+  min-height: 100px;
+  padding: 0 10px;
+
+
+  display: flex;
+  display: -webkit-flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+}
+
+.hole-inner {
+  flex: 0 0 auto;
+  margin: 5px;
+
+  background:#f00;
+	height:10px;
+  width:10px;
   border-radius: 5px;
 }
