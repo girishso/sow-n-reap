@@ -52,12 +52,44 @@ init =
 
 
 type Msg
-    = NoOp
+    = OnHoleClick Hole
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        OnHoleClick currentHole ->
+            let
+                holes =
+                    -- current hole zero seeds
+                    model.holes
+                        |> List.indexedMap
+                            (\ix hole ->
+                                if ix == currentHole.ix then
+                                    { hole | seeds = 0 }
+
+                                else
+                                    hole
+                            )
+                        |> List.indexedMap
+                            (\ix hole ->
+                                let
+                                    nholesToFill =
+                                        currentHole.ix + currentHole.seeds
+                                in
+                                if ix <= nholesToFill && ix > currentHole.ix then
+                                    -- next (n seeds) holes, add one seed each
+                                    { hole | seeds = hole.seeds + 1 }
+
+                                else if nholesToFill >= nHoles && ix <= (nholesToFill - nHoles) then
+                                    -- (rotate) fill n initial holes if currentHole spills over
+                                    { hole | seeds = hole.seeds + 1 }
+
+                                else
+                                    hole
+                            )
+            in
+            ( { model | holes = holes }, Cmd.none )
 
 
 
@@ -84,7 +116,7 @@ view model =
         renderHole hole =
             td []
                 [ div [ class "hole" ]
-                    [ div [ class "hole-i1" ]
+                    [ div [ class "hole-i1", onClick (OnHoleClick hole) ]
                         (div [ class "quiet" ]
                             [ ( hole.seeds, hole.mine, hole.ix ) |> Debug.toString |> text ]
                             :: renderSeeds hole.seeds
@@ -97,11 +129,7 @@ view model =
     in
     div [ style "text-align" "center" ]
         [ h1 [] [ text "Sow n Reap" ]
-        , table
-            [ id "mainTbl"
-            , HA.attribute "cellpadding" "10"
-            , HA.attribute "cellspacing" "10"
-            ]
+        , table [ id "mainTbl", HA.attribute "cellpadding" "10", HA.attribute "cellspacing" "10" ]
             [ renderRow secondRow
             , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
             , renderRow firstRow

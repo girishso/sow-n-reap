@@ -67,6 +67,7 @@ ul.hole-inner li {
 .hole-i1 {
   min-height: 100px;
   padding: 0 10px;
+  border-radius: 50px;
 
 
   display: flex;
@@ -76,6 +77,10 @@ ul.hole-inner li {
   justify-content: center;
   align-items: center;
   align-content: center;
+}
+
+.hole-i1:hover {
+  background-color: #ccc;
 }
 
 .seed {
