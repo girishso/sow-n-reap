@@ -87,3 +87,7 @@ ul.hole-inner li {
   width:10px;
   border-radius: 5px;
 }
+
+.quiet {
+  color: #aaa;
+}

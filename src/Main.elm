@@ -11,7 +11,11 @@ import Html.Events as HE exposing (..)
 
 
 type alias Model =
-    List Int
+    { holes : List Hole }
+
+
+type alias Hole =
+    { seeds : Int, mine : Bool, ix : Int }
 
 
 nHoles =
@@ -26,13 +30,21 @@ init =
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then
-                            1
+                            Hole 1 True ix
 
                         else
-                            n
+                            Hole n True ix
+                    )
+                |> List.indexedMap
+                    (\ix hole ->
+                        if ix > 6 then
+                            { hole | mine = False }
+
+                        else
+                            hole
                     )
     in
-    ( holes, Cmd.none )
+    ( { holes = holes }, Cmd.none )
 
 
 
@@ -59,10 +71,10 @@ view model =
             nHoles // 2
 
         firstRow =
-            List.take holesPerRow model
+            List.take holesPerRow model.holes
 
         secondRow =
-            List.drop holesPerRow model
+            List.drop holesPerRow model.holes |> List.reverse
 
         renderSeeds n =
             List.range 1 n
@@ -72,7 +84,12 @@ view model =
         renderHole hole =
             td []
                 [ div [ class "hole" ]
-                    [ div [ class "hole-i1" ] (renderSeeds hole) ]
+                    [ div [ class "hole-i1" ]
+                        (div [ class "quiet" ]
+                            [ ( hole.seeds, hole.mine, hole.ix ) |> Debug.toString |> text ]
+                            :: renderSeeds hole.seeds
+                        )
+                    ]
                 ]
 
         renderRow row =
@@ -85,9 +102,9 @@ view model =
             , HA.attribute "cellpadding" "10"
             , HA.attribute "cellspacing" "10"
             ]
-            [ renderRow firstRow
+            [ renderRow secondRow
             , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
-            , renderRow secondRow
+            , renderRow firstRow
             ]
         ]
 
