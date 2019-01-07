@@ -68,11 +68,15 @@ init =
 type Msg
     = OnHoleClick Hole
     | HideDisappearingSeeds
+    | StopHilite
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case Debug.log "update" msg of
+        StopHilite ->
+            ( { model | holes = List.map (\hole -> { hole | hilite = False }) model.holes }, Cmd.none )
+
         OnHoleClick currentHole ->
             let
                 holes =
@@ -179,7 +183,11 @@ view model =
         renderHole hole =
             td []
                 [ div [ class "hole-container" ]
-                    [ div [ classList [ ( "hole", True ), ( "hilite-hole", hole.hilite ) ], onClick (OnHoleClick hole) ]
+                    [ div
+                        [ classList [ ( "hole", True ), ( "hilite-hole", hole.hilite ) ]
+                        , onClick (OnHoleClick hole)
+                        , onMouseEnter StopHilite
+                        ]
                         (div [ class "quiet" ]
                             [ printHole hole |> text ]
                             :: renderSeeds hole.seeds
@@ -205,7 +213,7 @@ subscriptions model =
     let
         anyDisappearingSeeds =
             model.holes
-                |> List.map (\hole -> List.any (\seed -> seed == Disappearing) hole.seeds)
+                |> List.map (\hole -> List.any ((==) Disappearing) hole.seeds)
                 |> List.any ((==) True)
     in
     if anyDisappearingSeeds then
