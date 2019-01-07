@@ -18,7 +18,7 @@ type alias Model =
 
 
 type alias Hole =
-    { seeds : List Seed, mine : Bool, ix : Int }
+    { seeds : List Seed, mine : Bool, ix : Int, hilite : Bool }
 
 
 type Seed
@@ -44,10 +44,10 @@ init =
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then
-                            Hole (createSeeds 1) True ix
+                            Hole (createSeeds 1) True ix False
 
                         else
-                            Hole (createSeeds n) True ix
+                            Hole (createSeeds n) True ix False
                     )
                 |> List.indexedMap
                     (\ix hole ->
@@ -76,12 +76,14 @@ update msg model =
         OnHoleClick currentHole ->
             let
                 holes =
-                    -- current hole zero seeds, make them Disappearing
                     model.holes
+                        -- stop highliting holes
+                        |> List.map (\hole -> { hole | hilite = False })
+                        -- current hole zero seeds, make them Disappearing
                         |> List.indexedMap
                             (\ix hole ->
                                 if ix == currentHole.ix then
-                                    { hole | seeds = List.map (\_ -> Disappearing) hole.seeds }
+                                    { hole | seeds = List.map (\_ -> Disappearing) hole.seeds, hilite = True }
 
                                 else
                                     hole
@@ -94,11 +96,11 @@ update msg model =
                                 in
                                 if ix <= nholesToFill && ix > currentHole.ix then
                                     -- next (n seeds) holes, add one seed each
-                                    { hole | seeds = hole.seeds ++ [ Appearing ] }
+                                    { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
 
                                 else if nholesToFill >= nHoles && ix <= (nholesToFill - nHoles) then
                                     -- (rotate) fill n initial holes if currentHole spills over
-                                    { hole | seeds = hole.seeds ++ [ Appearing ] }
+                                    { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
 
                                 else
                                     hole
@@ -177,7 +179,7 @@ view model =
         renderHole hole =
             td []
                 [ div [ class "hole-container" ]
-                    [ div [ class "hole", onClick (OnHoleClick hole) ]
+                    [ div [ classList [ ( "hole", True ), ( "hilite-hole", hole.hilite ) ], onClick (OnHoleClick hole) ]
                         (div [ class "quiet" ]
                             [ printHole hole |> text ]
                             :: renderSeeds hole.seeds
@@ -207,7 +209,7 @@ subscriptions model =
                 |> List.any ((==) True)
     in
     if anyDisappearingSeeds then
-        Time.every 2000 (always HideDisappearingSeeds)
+        Time.every 3000 (always HideDisappearingSeeds)
 
     else
         Sub.none
