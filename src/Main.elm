@@ -18,7 +18,7 @@ type alias Model =
 
 
 type alias Hole =
-    { seeds : List Seed, mine : Bool, ix : Int, hilite : Bool }
+    { seeds : List Seed, ix : Int, hilite : Bool }
 
 
 type Seed
@@ -44,19 +44,20 @@ init =
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then
-                            Hole (createSeeds 1) True ix False
+                            Hole (createSeeds 1) ix False
 
                         else
-                            Hole (createSeeds n) True ix False
+                            Hole (createSeeds n) ix False
                     )
-                |> List.indexedMap
-                    (\ix hole ->
-                        if ix > 6 then
-                            { hole | mine = False }
 
-                        else
-                            hole
-                    )
+        -- |> List.indexedMap
+        --     (\ix hole ->
+        --         if ix > 6 then
+        --             { hole | mine = False }
+        --
+        --         else
+        --             hole
+        --     )
     in
     ( { holes = holes }, Cmd.none )
 
@@ -115,18 +116,20 @@ update msg model =
                             else
                                 hole
                         )
+
+                newHoles =
+                    if anyDisappearingSeeds model || isHoleEmpty currentHole then
+                        model.holes
+
+                    else
+                        model.holes
+                            -- stop highliting holes
+                            |> stopHilitingHoles
+                            -- current hole zero seeds, mark them Disappearing
+                            |> markCurrentHoleDisappering
+                            |> fillNextHolesRotateIfNecessary
             in
-            ( { model
-                | holes =
-                    model.holes
-                        -- stop highliting holes
-                        |> stopHilitingHoles
-                        -- current hole zero seeds, mark them Disappearing
-                        |> markCurrentHoleDisappering
-                        |> fillNextHolesRotateIfNecessary
-              }
-            , Cmd.none
-            )
+            ( { model | holes = newHoles }, Cmd.none )
 
         HideDisappearingSeeds ->
             let
@@ -200,8 +203,8 @@ view model =
                 |> List.map
                     (\seed -> div [ class "seed", class (seedStr seed) ] [])
 
-        printHole hole =
-            ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.mine, hole.ix )
+        debugHole hole =
+            ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
                 |> Debug.toString
 
         renderHole hole =
@@ -213,7 +216,7 @@ view model =
                         , onMouseEnter StopHilite
                         ]
                         (div [ class "quiet" ]
-                            [ printHole hole |> text ]
+                            [ debugHole hole |> text ]
                             :: renderSeeds hole.seeds
                         )
                     ]
@@ -222,7 +225,7 @@ view model =
         renderRow row =
             tr [] (List.map renderHole row)
     in
-    div [ style "text-align" "center" ]
+    div []
         [ h1 [] [ text "Sow n Reap" ]
         , table [ id "mainTbl", HA.attribute "cellpadding" "10", HA.attribute "cellspacing" "10" ]
             [ renderRow secondRow
@@ -232,15 +235,21 @@ view model =
         ]
 
 
+isHoleEmpty : Hole -> Bool
+isHoleEmpty hole =
+    List.isEmpty hole.seeds
+
+
+anyDisappearingSeeds : Model -> Bool
+anyDisappearingSeeds model =
+    model.holes
+        |> List.map (\hole -> List.any ((==) Disappearing) hole.seeds)
+        |> List.any ((==) True)
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    let
-        anyDisappearingSeeds =
-            model.holes
-                |> List.map (\hole -> List.any ((==) Disappearing) hole.seeds)
-                |> List.any ((==) True)
-    in
-    if anyDisappearingSeeds then
+    if anyDisappearingSeeds model then
         Time.every 3000 (always HideDisappearingSeeds)
 
     else
