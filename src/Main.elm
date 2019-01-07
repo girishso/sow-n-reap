@@ -4,6 +4,9 @@ import Browser
 import Html exposing (..)
 import Html.Attributes as HA exposing (..)
 import Html.Events as HE exposing (..)
+import Json.Encode as Encode
+import List.Extra
+import Time
 
 
 
@@ -15,7 +18,18 @@ type alias Model =
 
 
 type alias Hole =
-    { seeds : Int, mine : Bool, ix : Int }
+    { seeds : List Seed, mine : Bool, ix : Int }
+
+
+type Seed
+    = Disappearing
+    | Appearing
+    | Normal
+
+
+createSeeds : Int -> List Seed
+createSeeds n =
+    List.repeat n Normal
 
 
 nHoles =
@@ -30,10 +44,10 @@ init =
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then
-                            Hole 1 True ix
+                            Hole (createSeeds 1) True ix
 
                         else
-                            Hole n True ix
+                            Hole (createSeeds n) True ix
                     )
                 |> List.indexedMap
                     (\ix hole ->
@@ -53,20 +67,21 @@ init =
 
 type Msg
     = OnHoleClick Hole
+    | HideDisappearingSeeds
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
+    case Debug.log "update" msg of
         OnHoleClick currentHole ->
             let
                 holes =
-                    -- current hole zero seeds
+                    -- current hole zero seeds, make them Disappearing
                     model.holes
                         |> List.indexedMap
                             (\ix hole ->
                                 if ix == currentHole.ix then
-                                    { hole | seeds = 0 }
+                                    { hole | seeds = List.map (\_ -> Disappearing) hole.seeds }
 
                                 else
                                     hole
@@ -75,21 +90,63 @@ update msg model =
                             (\ix hole ->
                                 let
                                     nholesToFill =
-                                        currentHole.ix + currentHole.seeds
+                                        currentHole.ix + List.length currentHole.seeds
                                 in
                                 if ix <= nholesToFill && ix > currentHole.ix then
                                     -- next (n seeds) holes, add one seed each
-                                    { hole | seeds = hole.seeds + 1 }
+                                    { hole | seeds = hole.seeds ++ [ Appearing ] }
 
                                 else if nholesToFill >= nHoles && ix <= (nholesToFill - nHoles) then
                                     -- (rotate) fill n initial holes if currentHole spills over
-                                    { hole | seeds = hole.seeds + 1 }
+                                    { hole | seeds = hole.seeds ++ [ Appearing ] }
 
                                 else
                                     hole
                             )
             in
             ( { model | holes = holes }, Cmd.none )
+
+        HideDisappearingSeeds ->
+            let
+                newHoles =
+                    model.holes
+                        |> List.map
+                            (\hole ->
+                                if List.any ((==) Disappearing) hole.seeds then
+                                    { hole | seeds = [] }
+
+                                else
+                                    hole
+                            )
+                        |> List.map (\hole -> { hole | seeds = List.map (\_ -> Normal) hole.seeds })
+            in
+            ( { model | holes = newHoles }, Cmd.none )
+
+
+seedEncoder : Seed -> Encode.Value
+seedEncoder v =
+    case v of
+        Disappearing ->
+            Encode.string "Disappearing"
+
+        Appearing ->
+            Encode.string "Appearing"
+
+        Normal ->
+            Encode.string "Normal"
+
+
+seedStr : Seed -> String
+seedStr seed =
+    case seed of
+        Disappearing ->
+            "disappearing"
+
+        Appearing ->
+            "appearing"
+
+        Normal ->
+            "normal"
 
 
 
@@ -108,17 +165,21 @@ view model =
         secondRow =
             List.drop holesPerRow model.holes |> List.reverse
 
-        renderSeeds n =
-            List.range 1 n
+        renderSeeds seeds =
+            seeds
                 |> List.map
-                    (\x -> div [ class "seed" ] [])
+                    (\seed -> div [ class "seed", class (seedStr seed) ] [])
+
+        printHole hole =
+            ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.mine, hole.ix )
+                |> Debug.toString
 
         renderHole hole =
             td []
-                [ div [ class "hole" ]
-                    [ div [ class "hole-i1", onClick (OnHoleClick hole) ]
+                [ div [ class "hole-container" ]
+                    [ div [ class "hole", onClick (OnHoleClick hole) ]
                         (div [ class "quiet" ]
-                            [ ( hole.seeds, hole.mine, hole.ix ) |> Debug.toString |> text ]
+                            [ printHole hole |> text ]
                             :: renderSeeds hole.seeds
                         )
                     ]
@@ -137,6 +198,21 @@ view model =
         ]
 
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    let
+        anyDisappearingSeeds =
+            model.holes
+                |> List.map (\hole -> List.any (\seed -> seed == Disappearing) hole.seeds)
+                |> List.any ((==) True)
+    in
+    if anyDisappearingSeeds then
+        Time.every 2000 (always HideDisappearingSeeds)
+
+    else
+        Sub.none
+
+
 
 ---- PROGRAM ----
 
@@ -147,5 +223,7 @@ main =
         { view = view
         , init = \_ -> init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
+
+        -- , subscriptions = always Sub.none
         }
