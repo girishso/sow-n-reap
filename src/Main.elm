@@ -75,58 +75,82 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case Debug.log "update" msg of
         StopHilite ->
-            ( { model | holes = List.map (\hole -> { hole | hilite = False }) model.holes }, Cmd.none )
+            ( { model
+                | holes =
+                    List.map (\hole -> { hole | hilite = False }) model.holes
+              }
+            , Cmd.none
+            )
 
         OnHoleClick currentHole ->
             let
-                holes =
+                stopHilitingHoles =
+                    List.map (\hole -> { hole | hilite = False })
+
+                markCurrentHoleDisappering =
+                    List.indexedMap
+                        (\ix hole ->
+                            if ix == currentHole.ix then
+                                { hole | seeds = List.map (\_ -> Disappearing) hole.seeds, hilite = True }
+
+                            else
+                                hole
+                        )
+
+                fillNextHolesRotateIfNecessary =
+                    List.indexedMap
+                        (\ix hole ->
+                            let
+                                nholesToFill =
+                                    currentHole.ix + List.length currentHole.seeds
+                            in
+                            if ix <= nholesToFill && ix > currentHole.ix then
+                                -- next (n seeds) holes, add one seed each
+                                { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
+
+                            else if nholesToFill >= nHoles && ix <= (nholesToFill - nHoles) then
+                                -- (rotate) fill n initial holes if currentHole spills over
+                                { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
+
+                            else
+                                hole
+                        )
+            in
+            ( { model
+                | holes =
                     model.holes
                         -- stop highliting holes
-                        |> List.map (\hole -> { hole | hilite = False })
-                        -- current hole zero seeds, make them Disappearing
-                        |> List.indexedMap
-                            (\ix hole ->
-                                if ix == currentHole.ix then
-                                    { hole | seeds = List.map (\_ -> Disappearing) hole.seeds, hilite = True }
-
-                                else
-                                    hole
-                            )
-                        |> List.indexedMap
-                            (\ix hole ->
-                                let
-                                    nholesToFill =
-                                        currentHole.ix + List.length currentHole.seeds
-                                in
-                                if ix <= nholesToFill && ix > currentHole.ix then
-                                    -- next (n seeds) holes, add one seed each
-                                    { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
-
-                                else if nholesToFill >= nHoles && ix <= (nholesToFill - nHoles) then
-                                    -- (rotate) fill n initial holes if currentHole spills over
-                                    { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
-
-                                else
-                                    hole
-                            )
-            in
-            ( { model | holes = holes }, Cmd.none )
+                        |> stopHilitingHoles
+                        -- current hole zero seeds, mark them Disappearing
+                        |> markCurrentHoleDisappering
+                        |> fillNextHolesRotateIfNecessary
+              }
+            , Cmd.none
+            )
 
         HideDisappearingSeeds ->
             let
-                newHoles =
-                    model.holes
-                        |> List.map
-                            (\hole ->
-                                if List.any ((==) Disappearing) hole.seeds then
-                                    { hole | seeds = [] }
+                removeDisappearingSeeds =
+                    List.map
+                        (\hole ->
+                            if List.any ((==) Disappearing) hole.seeds then
+                                { hole | seeds = [] }
 
-                                else
-                                    hole
-                            )
-                        |> List.map (\hole -> { hole | seeds = List.map (\_ -> Normal) hole.seeds })
+                            else
+                                hole
+                        )
+
+                markAllSeedsNormal =
+                    List.map (\hole -> { hole | seeds = List.map (\_ -> Normal) hole.seeds })
             in
-            ( { model | holes = newHoles }, Cmd.none )
+            ( { model
+                | holes =
+                    model.holes
+                        |> removeDisappearingSeeds
+                        |> markAllSeedsNormal
+              }
+            , Cmd.none
+            )
 
 
 seedEncoder : Seed -> Encode.Value
