@@ -14,12 +14,50 @@ img {
   max-width: 200px;
 }
 
+.board-container {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-content: stretch;
+    align-items: center;
+    }
+
+.flex-item {
+    order: 0;
+    flex: 0 1 auto;
+    align-self: auto;
+}
+
+.player {
+  min-height: 100px;
+  width: 500px;
+  padding: 0 10px;
+  border-radius: 50px;
+  box-shadow: inset 0px 0px 20px 0px rgba(112,112,112,1);
+  display: flex;
+  display: -webkit-flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+}
+
+.player1 {
+  margin-bottom: 20px;
+}
+
+.player2 {
+  margin-top: 20px;
+}
+
 #mainTbl {
 
   cellpadding: 10;
   cellspacing: 10;
 
-  width: 50%;
+  /* width: 50%; */
   margin: 0 auto;
 
   /* border: 1px #9c9b9b solid; */
@@ -91,7 +129,8 @@ ul.hole-inner li {
   flex: 0 0 auto;
   margin: 5px;
 
-  background:#f00;
+  background: radial-gradient(circle at 5px 5px, #ff0101, #fba8a8);
+  box-shadow: 0px 2px 6px 0px rgba(140, 140, 140, 0.75);
 	height:15px;
   width:15px;
   border-radius: 10px;

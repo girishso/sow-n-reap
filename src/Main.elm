@@ -68,7 +68,7 @@ init =
         --             hole
         --     )
         gameState =
-            { holes = holes, player1Seeds = 3, player2Seeds = 4, currentPlayer = PlayerOne }
+            { holes = holes, player1Seeds = 3, player2Seeds = 23, currentPlayer = PlayerOne }
     in
     ( { gameState = gameState, thisPlayer = PlayerOne }, Cmd.none )
 
@@ -205,7 +205,21 @@ view model =
     let
         gameState =
             model.gameState
+    in
+    div [ class "main" ]
+        [ h1 [] [ text "Sow n Reap" ]
+        , renderCurrentPlayer gameState
+        , div [ class "board-container" ]
+            [ renderPlayer gameState.player1Seeds "player1"
+            , renderBoard gameState
+            , renderPlayer gameState.player2Seeds "player2"
+            ]
+        ]
 
+
+renderBoard : GameState -> Html Msg
+renderBoard gameState =
+    let
         holesPerRow =
             nHoles // 2
 
@@ -243,22 +257,16 @@ view model =
         renderRow row =
             tr [] (List.map renderHole row)
     in
-    div []
-        [ h1 [] [ text "Sow n Reap" ]
-        , renderCurrentPlayer gameState
-        , renderPlayer gameState.player1Seeds
-        , table [ id "mainTbl", HA.attribute "cellpadding" "10", HA.attribute "cellspacing" "10" ]
-            [ renderRow secondRow
-            , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
-            , renderRow firstRow
-            ]
-        , renderPlayer gameState.player2Seeds
+    table [ id "mainTbl", class "flex-item", HA.attribute "cellpadding" "10", HA.attribute "cellspacing" "10" ]
+        [ renderRow secondRow
+        , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
+        , renderRow firstRow
         ]
 
 
-renderPlayer : Int -> Html Msg
-renderPlayer n =
-    div []
+renderPlayer : Int -> String -> Html Msg
+renderPlayer n whichPlayer =
+    div [ class "flex-item player", class whichPlayer ]
         (List.range 1 n |> List.map (\_ -> div [ class "seed appearing" ] []))
 
 
@@ -286,7 +294,7 @@ anyDisappearingSeeds gameState =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if anyDisappearingSeeds model.gameState then
-        Time.every 3000 (always HideDisappearingSeeds)
+        Time.every 2000 (always HideDisappearingSeeds)
 
     else
         Sub.none
