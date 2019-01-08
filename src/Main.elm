@@ -14,10 +14,10 @@ import Time
 
 
 type alias Model =
-    { gameState : GameState, thisPlayer : Player }
+    { gameModel : GameModel, thisPlayer : Player }
 
 
-type alias GameState =
+type alias GameModel =
     { holes : List Hole, player1Seeds : Int, player2Seeds : Int, currentPlayer : Player }
 
 
@@ -67,10 +67,10 @@ init =
         --         else
         --             hole
         --     )
-        gameState =
+        gameModel =
             { holes = holes, player1Seeds = 3, player2Seeds = 23, currentPlayer = PlayerOne }
     in
-    ( { gameState = gameState, thisPlayer = PlayerOne }, Cmd.none )
+    ( { gameModel = gameModel, thisPlayer = PlayerOne }, Cmd.none )
 
 
 
@@ -86,8 +86,8 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        gameState =
-            model.gameState
+        gameModel =
+            model.gameModel
     in
     case Debug.log "update" msg of
         StopHilite ->
@@ -128,21 +128,21 @@ update msg model =
                         )
 
                 newHoles =
-                    if anyDisappearingSeeds gameState || isHoleEmpty currentHole then
-                        gameState.holes
+                    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole then
+                        gameModel.holes
 
                     else
-                        gameState.holes
+                        gameModel.holes
                             -- stop highliting holes
                             |> stopHilitingHoles
                             -- current hole zero seeds, mark them Disappearing
                             |> markCurrentHoleDisappering
                             |> fillNextHolesRotateIfNecessary
 
-                newGameState =
-                    { gameState | holes = newHoles }
+                newGameModel =
+                    { gameModel | holes = newHoles }
             in
-            ( { model | gameState = newGameState }, Cmd.none )
+            ( { model | gameModel = newGameModel }, Cmd.none )
 
         HideDisappearingSeeds ->
             let
@@ -159,15 +159,15 @@ update msg model =
                 markAllSeedsNormal =
                     List.map (\hole -> { hole | seeds = List.map (\_ -> Normal) hole.seeds, hilite = False })
 
-                newGameState =
-                    { gameState
+                newGameModel =
+                    { gameModel
                         | holes =
-                            gameState.holes
+                            gameModel.holes
                                 |> removeDisappearingSeeds
                                 |> markAllSeedsNormal
                     }
             in
-            ( { model | gameState = newGameState }, Cmd.none )
+            ( { model | gameModel = newGameModel }, Cmd.none )
 
 
 seedEncoder : Seed -> Encode.Value
@@ -203,31 +203,31 @@ seedStr seed =
 view : Model -> Html Msg
 view model =
     let
-        gameState =
-            model.gameState
+        gameModel =
+            model.gameModel
     in
     div [ class "main" ]
         [ h1 [] [ text "Sow n Reap" ]
-        , renderCurrentPlayer gameState
+        , renderCurrentPlayer gameModel
         , div [ class "board-container" ]
-            [ renderPlayer gameState.player1Seeds "player1"
-            , renderBoard gameState
-            , renderPlayer gameState.player2Seeds "player2"
+            [ renderPlayer gameModel.player1Seeds "player1"
+            , renderBoard gameModel
+            , renderPlayer gameModel.player2Seeds "player2"
             ]
         ]
 
 
-renderBoard : GameState -> Html Msg
-renderBoard gameState =
+renderBoard : GameModel -> Html Msg
+renderBoard gameModel =
     let
         holesPerRow =
             nHoles // 2
 
         firstRow =
-            List.take holesPerRow gameState.holes
+            List.take holesPerRow gameModel.holes
 
         secondRow =
-            List.drop holesPerRow gameState.holes |> List.reverse
+            List.drop holesPerRow gameModel.holes |> List.reverse
 
         renderSeeds seeds =
             seeds
@@ -270,12 +270,12 @@ renderPlayer n whichPlayer =
         (List.range 1 n |> List.map (\_ -> div [ class "seed appearing" ] []))
 
 
-renderCurrentPlayer : GameState -> Html Msg
-renderCurrentPlayer gameState =
+renderCurrentPlayer : GameModel -> Html Msg
+renderCurrentPlayer gameModel =
     h3 []
         [ text <|
             "Current Player: "
-                ++ Debug.toString gameState.currentPlayer
+                ++ Debug.toString gameModel.currentPlayer
         ]
 
 
@@ -284,16 +284,16 @@ isHoleEmpty hole =
     List.isEmpty hole.seeds
 
 
-anyDisappearingSeeds : GameState -> Bool
-anyDisappearingSeeds gameState =
-    gameState.holes
+anyDisappearingSeeds : GameModel -> Bool
+anyDisappearingSeeds gameModel =
+    gameModel.holes
         |> List.map (\hole -> List.any ((==) Disappearing) hole.seeds)
         |> List.any ((==) True)
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if anyDisappearingSeeds model.gameState then
+    if anyDisappearingSeeds model.gameModel then
         Time.every 2000 (always HideDisappearingSeeds)
 
     else
