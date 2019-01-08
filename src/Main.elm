@@ -221,9 +221,10 @@ view model =
                     (\seed -> div [ class "seed", class (seedStr seed) ] [])
 
         debugHole hole =
-            ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
-                |> Debug.toString
+            ""
 
+        -- ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
+        -- |> Debug.toString
         renderHole hole =
             td []
                 [ div [ class "hole-container" ]
