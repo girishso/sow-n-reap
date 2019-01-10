@@ -18,11 +18,18 @@ type alias Model =
 
 
 type alias GameModel =
-    { holes : List Hole, player1Seeds : Int, player2Seeds : Int, currentPlayer : Player }
+    { holes : List Hole, player1Seeds : Int, player2Seeds : Int, gameState : GameState }
+
+
+type GameState
+    = Playing Player
+    | StartTurn Player
+    | Collect
+    | Finished
 
 
 type alias Hole =
-    { seeds : List Seed, ix : Int, hilite : Bool }
+    { seeds : List Seed, ix : Int, hilite : Bool, owner : Player }
 
 
 type Player
@@ -53,22 +60,22 @@ init =
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then
-                            Hole (createSeeds 1) ix False
+                            Hole (createSeeds 1) ix False PlayerOne
 
                         else
-                            Hole (createSeeds n) ix False
+                            Hole (createSeeds n) ix False PlayerOne
+                    )
+                |> List.indexedMap
+                    (\ix hole ->
+                        if ix > 6 then
+                            { hole | owner = PlayerTwo }
+
+                        else
+                            hole
                     )
 
-        -- |> List.indexedMap
-        --     (\ix hole ->
-        --         if ix > 6 then
-        --             { hole | mine = False }
-        --
-        --         else
-        --             hole
-        --     )
         gameModel =
-            { holes = holes, player1Seeds = 3, player2Seeds = 23, currentPlayer = PlayerOne }
+            { holes = holes, player1Seeds = 3, player2Seeds = 23, gameState = StartTurn PlayerOne }
     in
     ( { gameModel = gameModel, thisPlayer = PlayerOne }, Cmd.none )
 
@@ -111,15 +118,11 @@ update msg model =
                 fillNextHolesRotateIfNecessary =
                     List.indexedMap
                         (\ix hole ->
-                            let
-                                nholesToFill =
-                                    currentHole.ix + List.length currentHole.seeds
-                            in
-                            if ix <= nholesToFill && ix > currentHole.ix then
+                            if ix <= nholesToFill currentHole && ix > currentHole.ix then
                                 -- next (n seeds) holes, add one seed each
                                 { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
 
-                            else if nholesToFill >= nHoles && ix <= (nholesToFill - nHoles) then
+                            else if nholesToFill currentHole >= nHoles && ix <= (nholesToFill currentHole - nHoles) then
                                 -- (rotate) fill n initial holes if currentHole spills over
                                 { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
 
@@ -128,7 +131,7 @@ update msg model =
                         )
 
                 newHoles =
-                    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole then
+                    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole gameModel then
                         gameModel.holes
 
                     else
@@ -170,30 +173,57 @@ update msg model =
             ( { model | gameModel = newGameModel }, Cmd.none )
 
 
-seedEncoder : Seed -> Encode.Value
-seedEncoder v =
-    case v of
-        Disappearing ->
-            Encode.string "Disappearing"
-
-        Appearing ->
-            Encode.string "Appearing"
-
-        Normal ->
-            Encode.string "Normal"
+nholesToFill : Hole -> Int
+nholesToFill currentHole =
+    currentHole.ix + List.length currentHole.seeds
 
 
-seedStr : Seed -> String
-seedStr seed =
-    case seed of
-        Disappearing ->
-            "disappearing"
 
-        Appearing ->
-            "appearing"
+-- nextGameState : GameModel -> GameState
+-- nextGameState gameModel =
+--     case gameModel.gameState of
+--         Playing player ->
+--
+--
+--         StartTurn player ->
+--
+--
+--         Collect ->
+--
+--
+--         Finished ->
+-- nextActiveHole =
+--     if ix <= nholesToFill currentHole && ix > currentHole.ix then
+--         -- next (n seeds) holes, add one seed each
+--         ix + 1
+--
+--     else if nholesToFill currentHole >= nHoles && ix <= (nholesToFill currentHole - nHoles) then
+--         -- (rotate) fill n initial holes if currentHole spills over
+--         ix + 1
+--
+--     else
+--         hole
+--
 
-        Normal ->
-            "normal"
+
+isNotCurrentPlayersTurnOrHole : Hole -> GameModel -> Bool
+isNotCurrentPlayersTurnOrHole currentHole gameModel =
+    let
+        gameState =
+            gameModel.gameState
+    in
+    case gameState of
+        Playing player ->
+            False
+
+        StartTurn player ->
+            currentHole.owner /= player
+
+        Collect ->
+            False
+
+        Finished ->
+            False
 
 
 
@@ -259,7 +289,7 @@ renderBoard gameModel =
     in
     table [ id "mainTbl", class "flex-item", HA.attribute "cellpadding" "10", HA.attribute "cellspacing" "10" ]
         [ renderRow secondRow
-        , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [] [] ] ]
+        , tr [ class "middle-line" ] [ td [ colspan holesPerRow ] [ hr [ class "middle" ] [] ] ]
         , renderRow firstRow
         ]
 
@@ -275,7 +305,7 @@ renderCurrentPlayer gameModel =
     h3 []
         [ text <|
             "Current Player: "
-                ++ Debug.toString gameModel.currentPlayer
+                ++ Debug.toString gameModel.gameState
         ]
 
 
@@ -298,6 +328,32 @@ subscriptions model =
 
     else
         Sub.none
+
+
+seedEncoder : Seed -> Encode.Value
+seedEncoder v =
+    case v of
+        Disappearing ->
+            Encode.string "Disappearing"
+
+        Appearing ->
+            Encode.string "Appearing"
+
+        Normal ->
+            Encode.string "Normal"
+
+
+seedStr : Seed -> String
+seedStr seed =
+    case seed of
+        Disappearing ->
+            "disappearing"
+
+        Appearing ->
+            "appearing"
+
+        Normal ->
+            "normal"
 
 
 

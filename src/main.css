@@ -13,7 +13,10 @@ img {
   margin: 20px 0;
   max-width: 200px;
 }
-
+hr.middle {
+  box-shadow: 0 0 6px 0px rgb(193, 189, 189);
+  border-color: #fff;
+}
 .board-container {
     display: flex;
     flex-direction: column;
