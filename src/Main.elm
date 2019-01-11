@@ -102,67 +102,8 @@ update msg model =
 
         OnHoleClick currentHole ->
             let
-                stopHilitingHoles =
-                    List.map (\hole -> { hole | hilite = False })
-
-                markCurrentHoleDisappering =
-                    List.indexedMap
-                        (\ix hole ->
-                            if ix == currentHole.ix then
-                                { hole | seeds = List.map (\_ -> Disappearing) hole.seeds, hilite = True }
-
-                            else
-                                hole
-                        )
-
-                fillNextHolesRotateIfNecessary =
-                    List.indexedMap
-                        (\ix hole ->
-                            if ix <= nholesToFill currentHole && ix > currentHole.ix then
-                                -- next (n seeds) holes, add one seed each
-                                { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
-
-                            else if nholesToFill currentHole >= nHoles && ix <= (nholesToFill currentHole - nHoles) then
-                                -- (rotate) fill n initial holes if currentHole spills over
-                                { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
-
-                            else
-                                hole
-                        )
-
-                markNextPlayableHole =
-                    List.indexedMap
-                        (\ix hole ->
-                            let
-                                nextHole =
-                                    nholesToFill currentHole + 1
-                            in
-                            if ix == nextHole then
-                                { hole | nextTurn = True }
-
-                            else if nextHole > nHoles && ix == nextHole - nHoles then
-                                { hole | nextTurn = True }
-
-                            else
-                                { hole | nextTurn = False }
-                        )
-
-                newHoles =
-                    -- if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole gameModel then
-                    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole then
-                        gameModel.holes
-
-                    else
-                        gameModel.holes
-                            -- stop highliting holes
-                            |> stopHilitingHoles
-                            -- current hole zero seeds, mark them Disappearing
-                            |> markCurrentHoleDisappering
-                            |> fillNextHolesRotateIfNecessary
-                            |> markNextPlayableHole
-
                 newGameModel =
-                    { gameModel | holes = newHoles }
+                    { gameModel | holes = handleHoleClick currentHole model }
             in
             ( { model | gameModel = newGameModel }, Cmd.none )
 
@@ -190,6 +131,71 @@ update msg model =
                     }
             in
             ( { model | gameModel = newGameModel }, Cmd.none )
+
+
+handleHoleClick : Hole -> Model -> List Hole
+handleHoleClick currentHole model =
+    let
+        gameModel =
+            model.gameModel
+
+        stopHilitingHoles =
+            List.map (\hole -> { hole | hilite = False })
+
+        markCurrentHoleDisappering =
+            List.indexedMap
+                (\ix hole ->
+                    if ix == currentHole.ix then
+                        { hole | seeds = List.map (\_ -> Disappearing) hole.seeds, hilite = True }
+
+                    else
+                        hole
+                )
+
+        fillNextHolesRotateIfNecessary =
+            List.indexedMap
+                (\ix hole ->
+                    if ix <= nholesToFill currentHole && ix > currentHole.ix then
+                        -- next (n seeds) holes, add one seed each
+                        { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
+
+                    else if nholesToFill currentHole >= nHoles && ix <= (nholesToFill currentHole - nHoles) then
+                        -- (rotate) fill n initial holes if currentHole spills over
+                        { hole | seeds = hole.seeds ++ [ Appearing ], hilite = True }
+
+                    else
+                        hole
+                )
+
+        markNextPlayableHole =
+            List.indexedMap
+                (\ix hole ->
+                    let
+                        nextHole =
+                            nholesToFill currentHole + 1
+                    in
+                    if ix == nextHole then
+                        { hole | nextTurn = True }
+
+                    else if nextHole > nHoles && ix == nextHole - nHoles then
+                        { hole | nextTurn = True }
+
+                    else
+                        { hole | nextTurn = False }
+                )
+    in
+    -- if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole gameModel then
+    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || currentHole.nextTurn == False then
+        gameModel.holes
+
+    else
+        gameModel.holes
+            -- stop highliting holes
+            |> stopHilitingHoles
+            -- current hole zero seeds, mark them Disappearing
+            |> markCurrentHoleDisappering
+            |> fillNextHolesRotateIfNecessary
+            |> markNextPlayableHole
 
 
 nholesToFill : Hole -> Int
