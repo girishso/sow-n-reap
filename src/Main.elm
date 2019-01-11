@@ -29,7 +29,7 @@ type GameState
 
 
 type alias Hole =
-    { seeds : List Seed, ix : Int, hilite : Bool, owner : Player }
+    { seeds : List Seed, ix : Int, hilite : Bool, owner : Player, nextTurn : Bool }
 
 
 type Player
@@ -60,15 +60,15 @@ init =
                 |> List.indexedMap
                     (\ix n ->
                         if ix == 3 || ix == 10 then
-                            Hole (createSeeds 1) ix False PlayerOne
+                            Hole (createSeeds 1) ix False PlayerOne True
 
                         else
-                            Hole (createSeeds n) ix False PlayerOne
+                            Hole (createSeeds n) ix False PlayerOne True
                     )
                 |> List.indexedMap
                     (\ix hole ->
                         if ix > 6 then
-                            { hole | owner = PlayerTwo }
+                            { hole | owner = PlayerTwo, nextTurn = False }
 
                         else
                             hole
@@ -130,8 +130,26 @@ update msg model =
                                 hole
                         )
 
+                markNextPlayableHole =
+                    List.indexedMap
+                        (\ix hole ->
+                            let
+                                nextHole =
+                                    nholesToFill currentHole + 1
+                            in
+                            if ix == nextHole then
+                                { hole | nextTurn = True }
+
+                            else if nextHole > nHoles && ix == nextHole - nHoles then
+                                { hole | nextTurn = True }
+
+                            else
+                                { hole | nextTurn = False }
+                        )
+
                 newHoles =
-                    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole gameModel then
+                    -- if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole gameModel then
+                    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole then
                         gameModel.holes
 
                     else
@@ -141,6 +159,7 @@ update msg model =
                             -- current hole zero seeds, mark them Disappearing
                             |> markCurrentHoleDisappering
                             |> fillNextHolesRotateIfNecessary
+                            |> markNextPlayableHole
 
                 newGameModel =
                     { gameModel | holes = newHoles }
@@ -265,15 +284,14 @@ renderBoard gameModel =
                     (\seed -> div [ class "seed", class (seedStr seed) ] [])
 
         debugHole hole =
-            ""
+            ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
+                |> Debug.toString
 
-        -- ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
-        -- |> Debug.toString
         renderHole hole =
             td []
                 [ div [ class "hole-container" ]
                     [ div
-                        [ classList [ ( "hole", True ), ( "hilite-hole", hole.hilite ) ]
+                        [ classList [ ( "hole", True ), ( "hilite-hole", hole.hilite ), ( "next-turn", hole.nextTurn ) ]
                         , onClick (OnHoleClick hole)
                         , onMouseEnter StopHilite
                         ]
