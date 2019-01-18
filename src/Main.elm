@@ -14,11 +14,7 @@ import Time
 
 
 type alias Model =
-    { gameModel : GameModel, thisPlayer : Player }
-
-
-type alias GameModel =
-    { holes : List Hole, player1Seeds : Int, player2Seeds : Int, gameState : GameState }
+    { holes : List Hole, player1Seeds : Int, player2Seeds : Int, gameState : GameState, thisPlayer : Player }
 
 
 type GameState
@@ -73,11 +69,8 @@ init =
                         else
                             hole
                     )
-
-        gameModel =
-            { holes = holes, player1Seeds = 3, player2Seeds = 23, gameState = StartTurn PlayerOne }
     in
-    ( { gameModel = gameModel, thisPlayer = PlayerOne }, Cmd.none )
+    ( { holes = holes, player1Seeds = 3, player2Seeds = 23, gameState = StartTurn PlayerOne, thisPlayer = PlayerOne }, Cmd.none )
 
 
 
@@ -92,20 +85,12 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        gameModel =
-            model.gameModel
-    in
     case Debug.log "update" msg of
         StopHilite ->
             ( model, Cmd.none )
 
         OnHoleClick currentHole ->
-            let
-                newGameModel =
-                    { gameModel | holes = handleHoleClick currentHole model }
-            in
-            ( { model | gameModel = newGameModel }, Cmd.none )
+            ( { model | holes = handleHoleClick currentHole model }, Cmd.none )
 
         HideDisappearingSeeds ->
             let
@@ -121,24 +106,20 @@ update msg model =
 
                 markAllSeedsNormal =
                     List.map (\hole -> { hole | seeds = List.map (\_ -> Normal) hole.seeds, hilite = False })
-
-                newGameModel =
-                    { gameModel
-                        | holes =
-                            gameModel.holes
-                                |> removeDisappearingSeeds
-                                |> markAllSeedsNormal
-                    }
             in
-            ( { model | gameModel = newGameModel }, Cmd.none )
+            ( { model
+                | holes =
+                    model.holes
+                        |> removeDisappearingSeeds
+                        |> markAllSeedsNormal
+              }
+            , Cmd.none
+            )
 
 
 handleHoleClick : Hole -> Model -> List Hole
 handleHoleClick currentHole model =
     let
-        gameModel =
-            model.gameModel
-
         stopHilitingHoles =
             List.map (\hole -> { hole | hilite = False })
 
@@ -184,12 +165,12 @@ handleHoleClick currentHole model =
                         { hole | nextTurn = False }
                 )
     in
-    -- if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole gameModel then
-    if anyDisappearingSeeds gameModel || isHoleEmpty currentHole || currentHole.nextTurn == False then
-        gameModel.holes
+    -- if anyDisappearingSeeds model || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole model then
+    if anyDisappearingSeeds model || isHoleEmpty currentHole || currentHole.nextTurn == False then
+        model.holes
 
     else
-        gameModel.holes
+        model.holes
             -- stop highliting holes
             |> stopHilitingHoles
             -- current hole zero seeds, mark them Disappearing
@@ -205,8 +186,8 @@ nholesToFill currentHole =
 
 
 -- nextGameState : GameModel -> GameState
--- nextGameState gameModel =
---     case gameModel.gameState of
+-- nextGameState model =
+--     case model.gameState of
 --         Playing player ->
 --
 --
@@ -231,12 +212,8 @@ nholesToFill currentHole =
 --
 
 
-isNotCurrentPlayersTurnOrHole : Hole -> GameModel -> Bool
-isNotCurrentPlayersTurnOrHole currentHole gameModel =
-    let
-        gameState =
-            gameModel.gameState
-    in
+isNotCurrentPlayersTurnOrHole : Hole -> GameState -> Bool
+isNotCurrentPlayersTurnOrHole currentHole gameState =
     case gameState of
         Playing player ->
             False
@@ -257,32 +234,28 @@ isNotCurrentPlayersTurnOrHole currentHole gameModel =
 
 view : Model -> Html Msg
 view model =
-    let
-        gameModel =
-            model.gameModel
-    in
     div [ class "main" ]
         [ h1 [] [ text "Sow n Reap" ]
-        , renderCurrentPlayer gameModel
+        , renderCurrentPlayer model.gameState
         , div [ class "board-container" ]
-            [ renderPlayer gameModel.player1Seeds "player1"
-            , renderBoard gameModel
-            , renderPlayer gameModel.player2Seeds "player2"
+            [ renderPlayer model.player1Seeds "player1"
+            , renderBoard model
+            , renderPlayer model.player2Seeds "player2"
             ]
         ]
 
 
-renderBoard : GameModel -> Html Msg
-renderBoard gameModel =
+renderBoard : Model -> Html Msg
+renderBoard model =
     let
         holesPerRow =
             nHoles // 2
 
         firstRow =
-            List.take holesPerRow gameModel.holes
+            List.take holesPerRow model.holes
 
         secondRow =
-            List.drop holesPerRow gameModel.holes |> List.reverse
+            List.drop holesPerRow model.holes |> List.reverse
 
         renderSeeds seeds =
             seeds
@@ -324,12 +297,12 @@ renderPlayer n whichPlayer =
         (List.range 1 n |> List.map (\_ -> div [ class "seed appearing" ] []))
 
 
-renderCurrentPlayer : GameModel -> Html Msg
-renderCurrentPlayer gameModel =
+renderCurrentPlayer : GameState -> Html Msg
+renderCurrentPlayer gameState =
     h3 []
         [ text <|
             "Current Player: "
-                ++ Debug.toString gameModel.gameState
+                ++ Debug.toString gameState
         ]
 
 
@@ -338,16 +311,16 @@ isHoleEmpty hole =
     List.isEmpty hole.seeds
 
 
-anyDisappearingSeeds : GameModel -> Bool
-anyDisappearingSeeds gameModel =
-    gameModel.holes
+anyDisappearingSeeds : Model -> Bool
+anyDisappearingSeeds model =
+    model.holes
         |> List.map (\hole -> List.any ((==) Disappearing) hole.seeds)
         |> List.any ((==) True)
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if anyDisappearingSeeds model.gameModel then
+    if anyDisappearingSeeds model then
         Time.every 2000 (always HideDisappearingSeeds)
 
     else
