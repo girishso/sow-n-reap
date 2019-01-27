@@ -120,42 +120,11 @@ update msg model =
 calculateNextGameState : Model -> GameState
 calculateNextGameState model =
     -- detect collect mode
-    let
-        nextHoleHasSeeds ix =
-            List.Extra.getAt (ix + 1) model.holes
-                |> Maybe.map
-                    (\hole ->
-                        if List.isEmpty hole.seeds then
-                            -1
-
-                        else
-                            ix + 1
-                    )
-                |> Debug.log "nextHoleHasSeeds"
-                |> Maybe.withDefault -1
-
-        isNextHoleEmpty =
-            model.holes
-                |> List.Extra.findIndex .nextTurn
-                |> Debug.log "ix"
-                |> Maybe.map (\ix -> nextHoleHasSeeds ix)
-                |> Maybe.withDefault -1
-
-        nextIx =
-            isNextHoleEmpty
-
-        -- TODO: rotate if necessary
-    in
-    if nextIx /= -1 then
-        let
-            _ =
-                Debug.log "isNextHoleEmpty" True
-        in
-        -- Collect mode
-        Collect nextIx
+    if True then
+        Collect 7
 
     else
-        model.gameState
+        Playing PlayerOne
 
 
 handleHoleClick : Hole -> Model -> List Hole
@@ -299,32 +268,48 @@ renderBoard model =
         secondRow =
             List.drop holesPerRow model.holes |> List.reverse
 
-        renderSeeds seeds =
+        renderSeeds seeds collect =
             seeds
                 |> List.map
-                    (\seed -> div [ class "seed", class (seedStr seed) ] [])
+                    (\seed -> div [ class "seed", class (seedStr seed), collect ] [])
 
         debugHole hole =
             -- ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
             ( hole.ix, hole.nextTurn )
                 |> Debug.toString
 
-        renderHole hole =
+        collectHole =
+            case model.gameState of
+                Collect ix ->
+                    ix
+
+                _ ->
+                    -1
+
+        renderHole ix hole =
+            let
+                _ =
+                    Debug.log "renderHole" ix
+            in
             td []
                 [ div [ class "hole-container" ]
                     [ div
-                        [ classList [ ( "hole", True ), ( "hilite-hole", hole.hilite ), ( "next-turn", hole.nextTurn ) ]
+                        [ classList
+                            [ ( "hole", True )
+                            , ( "hilite-hole", hole.hilite )
+                            , ( "next-turn", hole.nextTurn )
+                            ]
                         , onClick (OnHoleClick hole)
                         ]
                         (div [ class "quiet" ]
                             [ debugHole hole |> text ]
-                            :: renderSeeds hole.seeds
+                            :: renderSeeds hole.seeds (classList [ ( "collect", hole.ix == collectHole ) ])
                         )
                     ]
                 ]
 
         renderRow row =
-            tr [] (List.map renderHole row)
+            tr [] (List.indexedMap renderHole row)
     in
     table [ id "mainTbl", class "flex-item", HA.attribute "cellpadding" "10", HA.attribute "cellspacing" "10" ]
         [ renderRow secondRow
