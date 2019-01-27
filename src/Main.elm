@@ -20,7 +20,7 @@ type alias Model =
 type GameState
     = Playing Player
     | StartTurn Player
-    | Collect
+    | Collect Int
     | Finished
 
 
@@ -70,7 +70,7 @@ init =
                             hole
                     )
     in
-    ( { holes = holes, player1Seeds = 3, player2Seeds = 23, gameState = StartTurn PlayerOne, thisPlayer = PlayerOne }, Cmd.none )
+    ( { holes = holes, player1Seeds = 0, player2Seeds = 0, gameState = StartTurn PlayerOne, thisPlayer = PlayerOne }, Cmd.none )
 
 
 
@@ -80,17 +80,17 @@ init =
 type Msg
     = OnHoleClick Hole
     | HideDisappearingSeeds
-    | StopHilite
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case Debug.log "update" msg of
-        StopHilite ->
-            ( model, Cmd.none )
-
         OnHoleClick currentHole ->
-            ( { model | holes = handleHoleClick currentHole model }, Cmd.none )
+            let
+                modelWithNewHoles =
+                    { model | holes = handleHoleClick currentHole model }
+            in
+            ( { modelWithNewHoles | gameState = calculateNextGameState modelWithNewHoles }, Cmd.none )
 
         HideDisappearingSeeds ->
             let
@@ -115,6 +115,47 @@ update msg model =
               }
             , Cmd.none
             )
+
+
+calculateNextGameState : Model -> GameState
+calculateNextGameState model =
+    -- detect collect mode
+    let
+        nextHoleHasSeeds ix =
+            List.Extra.getAt (ix + 1) model.holes
+                |> Maybe.map
+                    (\hole ->
+                        if List.isEmpty hole.seeds then
+                            -1
+
+                        else
+                            ix + 1
+                    )
+                |> Debug.log "nextHoleHasSeeds"
+                |> Maybe.withDefault -1
+
+        isNextHoleEmpty =
+            model.holes
+                |> List.Extra.findIndex .nextTurn
+                |> Debug.log "ix"
+                |> Maybe.map (\ix -> nextHoleHasSeeds ix)
+                |> Maybe.withDefault -1
+
+        nextIx =
+            isNextHoleEmpty
+
+        -- TODO: rotate if necessary
+    in
+    if nextIx /= -1 then
+        let
+            _ =
+                Debug.log "isNextHoleEmpty" True
+        in
+        -- Collect mode
+        Collect nextIx
+
+    else
+        model.gameState
 
 
 handleHoleClick : Hole -> Model -> List Hole
@@ -221,7 +262,7 @@ isNotCurrentPlayersTurnOrHole currentHole gameState =
         StartTurn player ->
             currentHole.owner /= player
 
-        Collect ->
+        Collect ix ->
             False
 
         Finished ->
@@ -236,6 +277,7 @@ view : Model -> Html Msg
 view model =
     div [ class "main" ]
         [ h1 [] [ text "Sow n Reap" ]
+        , h3 [] [ model.gameState |> Debug.toString |> text ]
         , renderCurrentPlayer model.gameState
         , div [ class "board-container" ]
             [ renderPlayer model.player1Seeds "player1"
@@ -263,7 +305,8 @@ renderBoard model =
                     (\seed -> div [ class "seed", class (seedStr seed) ] [])
 
         debugHole hole =
-            ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
+            -- ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
+            ( hole.ix, hole.nextTurn )
                 |> Debug.toString
 
         renderHole hole =
@@ -272,7 +315,6 @@ renderBoard model =
                     [ div
                         [ classList [ ( "hole", True ), ( "hilite-hole", hole.hilite ), ( "next-turn", hole.nextTurn ) ]
                         , onClick (OnHoleClick hole)
-                        , onMouseEnter StopHilite
                         ]
                         (div [ class "quiet" ]
                             [ debugHole hole |> text ]
@@ -321,7 +363,7 @@ anyDisappearingSeeds model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if anyDisappearingSeeds model then
-        Time.every 2000 (always HideDisappearingSeeds)
+        Time.every 1000 (always HideDisappearingSeeds)
 
     else
         Sub.none
