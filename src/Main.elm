@@ -20,7 +20,6 @@ type alias Model =
 type GameState
     = Playing Player
     | StartTurn Player
-    | Collect Int
     | Finished
 
 
@@ -37,6 +36,7 @@ type Seed
     = Disappearing
     | Appearing
     | Normal
+    | Collect
 
 
 createSeeds : Int -> List Seed
@@ -120,11 +120,11 @@ update msg model =
 calculateNextGameState : Model -> GameState
 calculateNextGameState model =
     -- detect collect mode
-    if True then
-        Collect 7
-
-    else
-        Playing PlayerOne
+    -- if True then
+    --     Collect 7
+    --
+    -- else
+    Playing PlayerOne
 
 
 handleHoleClick : Hole -> Model -> List Hole
@@ -231,9 +231,6 @@ isNotCurrentPlayersTurnOrHole currentHole gameState =
         StartTurn player ->
             currentHole.owner /= player
 
-        Collect ix ->
-            False
-
         Finished ->
             False
 
@@ -268,23 +265,15 @@ renderBoard model =
         secondRow =
             List.drop holesPerRow model.holes |> List.reverse
 
-        renderSeeds seeds collect =
+        renderSeeds seeds =
             seeds
                 |> List.map
-                    (\seed -> div [ class "seed", class (seedStr seed), collect ] [])
+                    (\seed -> div [ class "seed", class (seedStr seed) ] [])
 
         debugHole hole =
             -- ( hole.seeds |> List.map (seedStr >> String.slice 0 1) |> String.join "", hole.ix )
             ( hole.ix, hole.nextTurn )
                 |> Debug.toString
-
-        collectHole =
-            case model.gameState of
-                Collect ix ->
-                    ix
-
-                _ ->
-                    -1
 
         renderHole ix hole =
             let
@@ -303,7 +292,7 @@ renderBoard model =
                         ]
                         (div [ class "quiet" ]
                             [ debugHole hole |> text ]
-                            :: renderSeeds hole.seeds (classList [ ( "collect", hole.ix == collectHole ) ])
+                            :: renderSeeds hole.seeds
                         )
                     ]
                 ]
@@ -366,6 +355,9 @@ seedEncoder v =
         Normal ->
             Encode.string "Normal"
 
+        Collect ->
+            Encode.string "Collect"
+
 
 seedStr : Seed -> String
 seedStr seed =
@@ -378,6 +370,9 @@ seedStr seed =
 
         Normal ->
             "normal"
+
+        Collect ->
+            "collect"
 
 
 
