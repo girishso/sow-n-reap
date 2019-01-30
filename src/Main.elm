@@ -104,17 +104,33 @@ update msg model =
                                 hole
                         )
 
-                markAllSeedsNormal =
-                    List.map (\hole -> { hole | seeds = List.map (\_ -> Normal) hole.seeds, hilite = False })
+                markAllSeedsExceptCollectToNormal =
+                    List.map
+                        (\hole ->
+                            { hole
+                                | seeds =
+                                    if anyCollectSeeds hole then
+                                        hole.seeds
+
+                                    else
+                                        List.map (\_ -> Normal) hole.seeds
+                                , hilite = False
+                            }
+                        )
             in
             ( { model
                 | holes =
                     model.holes
                         |> removeDisappearingSeeds
-                        |> markAllSeedsNormal
+                        |> markAllSeedsExceptCollectToNormal
               }
             , Cmd.none
             )
+
+
+anyCollectSeeds : Hole -> Bool
+anyCollectSeeds hole =
+    List.any (\seed -> seed == Collect) hole.seeds
 
 
 calculateNextGameState : Model -> GameState
@@ -174,6 +190,24 @@ handleHoleClick currentHole model =
                     else
                         { hole | nextTurn = False }
                 )
+
+        markCollectableSeeds holes_ =
+            List.foldl
+                (\hole ( holes, collectNext ) ->
+                    ( (if collectNext then
+                        { hole | seeds = List.map (\_ -> Collect) hole.seeds }
+
+                       else
+                        hole
+                      )
+                        :: holes
+                    , hole.nextTurn == True && isHoleEmpty hole
+                    )
+                )
+                ( [], False )
+                holes_
+                |> Tuple.first
+                |> List.reverse
     in
     -- if anyDisappearingSeeds model || isHoleEmpty currentHole || isNotCurrentPlayersTurnOrHole currentHole model then
     if anyDisappearingSeeds model || isHoleEmpty currentHole || currentHole.nextTurn == False then
@@ -187,6 +221,7 @@ handleHoleClick currentHole model =
             |> markCurrentHoleDisappering
             |> fillNextHolesRotateIfNecessary
             |> markNextPlayableHole
+            |> markCollectableSeeds
 
 
 nholesToFill : Hole -> Int
@@ -276,10 +311,6 @@ renderBoard model =
                 |> Debug.toString
 
         renderHole ix hole =
-            let
-                _ =
-                    Debug.log "renderHole" ix
-            in
             td []
                 [ div [ class "hole-container" ]
                     [ div
